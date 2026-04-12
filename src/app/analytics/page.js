@@ -4,7 +4,6 @@ import { useState } from 'react';
 import Sidebar from '@/components/ui/Sidebar';
 import Header from '@/components/ui/Header';
 import StatCard from '@/components/ui/StatCard';
-import { MOCK_ANALYTICS } from '@/lib/mockData';
 import {
   Radar, Brain, Send, MessageCircle, Calendar,
   Trophy, TrendingUp, TrendingDown, BarChart3,
@@ -12,6 +11,22 @@ import {
   ArrowUpRight, ArrowDownRight,
   Activity
 } from 'lucide-react';
+
+const MOCK_ANALYTICS = {
+  totalScanned: 0,
+  totalAnalyzed: 0,
+  totalContacted: 0,
+  totalReplied: 0,
+  totalMeetings: 0,
+  totalConverted: 0,
+  replyRate: 0,
+  conversionRate: 0,
+  avgDealValue: 0,
+  weeklyGrowth: { scanned: 0, contacted: 0, replied: 0, converted: 0 },
+  recentActivity: [],
+  channelPerformance: [],
+  topIndustries: []
+};
 
 function FunnelChart({ data }) {
   const stages = [
