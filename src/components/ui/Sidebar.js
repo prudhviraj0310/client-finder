@@ -28,7 +28,7 @@ export default function Sidebar() {
       <div className="sidebar-header">
         <div className="sidebar-logo">T</div>
         <div className="sidebar-brand">
-          <span className="sidebar-brand-name gradient-text">HexaInd TAC</span>
+          <span className="sidebar-brand-name gradient-text">Client Finder</span>
           <span className="sidebar-brand-sub">Target · Analyze · Convert</span>
         </div>
       </div>

@@ -11,7 +11,7 @@ export async function POST(request) {
       const gap = business?.missingItems?.[0] || 'your website';
       return NextResponse.json({
         subject: isEmail ? `${business?.name || 'Your Business'} + Digital Growth` : null,
-        body: `Hi there,\n\nI was looking into ${business?.name || 'your business'} and noticed a massive opportunity regarding ${gap.toLowerCase()}. \n\nBusinesses fixing this see a 40% jump in inbound leads. I built HexaInd TAC to solve exactly this.\n\nAre you open to a quick 5-minute chat to see how we’d fix this for you?\n\nBest,\nHexaInd Team`
+        body: `Hi there,\n\nI was looking into ${business?.name || 'your business'} and noticed a massive opportunity regarding ${gap.toLowerCase()}. \n\nBusinesses fixing this see a 40% jump in inbound leads. I built Client Finder to solve exactly this.\n\nAre you open to a quick 5-minute chat to see how we’d fix this for you?\n\nBest,\nPrudhviraj`
       });
     }
 

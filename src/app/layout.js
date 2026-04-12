@@ -1,8 +1,8 @@
 import './globals.css';
 
 export const metadata = {
-  title: 'HexaInd TAC — Target · Analyze · Convert',
-  description: 'Intelligent global outreach engine that maps businesses worldwide, analyzes their gaps, and converts them into clients through deeply personalized, problem-first communication.',
+  title: 'Client Finder — Target · Analyze · Convert',
+  description: 'AI-powered autonomous client acquisition platform',
   keywords: 'client acquisition, business intelligence, personalized outreach, lead generation',
 };
 

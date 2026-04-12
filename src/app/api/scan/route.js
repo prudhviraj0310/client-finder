@@ -69,7 +69,7 @@ async function searchNominatim(lat, lng, industry, radius) {
 
   const response = await fetchWithTimeout(url.toString(), {
     headers: {
-      'User-Agent': 'HexaIndTAC/1.0 (Business Scanner)',
+      'User-Agent': 'ClientFinder/1.0 (Business Scanner)',
     },
   }, 8000);
 

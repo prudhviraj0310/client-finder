@@ -1,4 +1,4 @@
-// Mock data for the HexaInd TAC platform
+// Mock data for the Client Finder platform
 // Realistic businesses across multiple countries and industries
 
 export const MOCK_BUSINESSES = [

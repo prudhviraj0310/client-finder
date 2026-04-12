@@ -1,6 +1,6 @@
-# HexaInd TAC — Target · Analyze · Convert 🎯
+# Client Finder — Target · Analyze · Convert 🎯
 
-**HexaInd TAC** is an autonomous, AI-driven B2B client acquisition platform. It replaces the traditional manual outreach pipeline with an end-to-end autonomous engine: instantly targeting global businesses with digital gaps, automatically structuring tactical gap analyses, and drafting hyper-personalized outbound hooks via AI.
+**Client Finder** is an autonomous, AI-driven B2B client acquisition platform. It replaces the traditional manual outreach pipeline with an end-to-end autonomous engine: instantly targeting global businesses with digital gaps, automatically structuring tactical gap analyses, and drafting hyper-personalized outbound hooks via AI.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![React](https://img.shields.io/badge/React-20232A?style=flat&logo=react&logoColor=61DAFB)
