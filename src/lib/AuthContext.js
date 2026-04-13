@@ -97,7 +97,7 @@ export function AuthProvider({ children }) {
     setCurrentUser(user);
     localStorage.setItem('cf_session', JSON.stringify({ userId: user.id, loginAt: new Date().toISOString() }));
     return { success: true, user };
-  }, []);
+  }, [users]);
 
   const logout = useCallback(() => {
     setCurrentUser(null);
