@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { supabase } from './supabaseClient';
 
 const TaskContext = createContext(null);
 
@@ -31,8 +32,24 @@ export function TaskProvider({ children }) {
   const [journals, setJournals] = useState([]);
 
   useEffect(() => {
-    setTasks(getStoredTasks());
-    setJournals(getStoredJournals());
+    async function loadData() {
+      try {
+        const [{ data: dbTasks }, { data: dbJournals }] = await Promise.all([
+          supabase.from('tasks').select('*'),
+          supabase.from('journals').select('*')
+        ]);
+        if (dbTasks) {
+          // Normalize completedObjectives from potential null
+          setTasks(dbTasks.map(t => ({...t, completedObjectives: t.completedObjectives || []})));
+        }
+        if (dbJournals) setJournals(dbJournals);
+      } catch (err) {
+        console.error("Supabase load error:", err);
+        setTasks(getStoredTasks());
+        setJournals(getStoredJournals());
+      }
+    }
+    loadData();
   }, []);
 
   const createTask = useCallback((taskData) => {
@@ -62,97 +79,95 @@ export function TaskProvider({ children }) {
       createdAt: new Date().toISOString(),
       dueDate: taskData.dueDate || new Date().toISOString().split('T')[0],
     };
-    const updated = [...getStoredTasks(), newTask];
-    saveTasks(updated);
-    setTasks(updated);
+    
+    setTasks(prev => [...prev, newTask]);
+    supabase.from('tasks').insert([newTask]).then(({error}) => {
+      if (error) console.error("Error creating task:", error);
+    });
+    
     return newTask;
   }, []);
 
   const updateTask = useCallback((taskId, updates) => {
-    const allTasks = getStoredTasks();
-    const updated = allTasks.map(t => t.id === taskId ? { ...t, ...updates } : t);
-    saveTasks(updated);
-    setTasks(updated);
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, ...updates } : t));
+    supabase.from('tasks').update(updates).eq('id', taskId).then();
   }, []);
 
   const deleteTask = useCallback((taskId) => {
-    const allTasks = getStoredTasks();
-    const updated = allTasks.filter(t => t.id !== taskId);
-    saveTasks(updated);
-    setTasks(updated);
+    setTasks(prev => prev.filter(t => t.id !== taskId));
+    supabase.from('tasks').delete().eq('id', taskId).then();
   }, []);
 
   const toggleObjective = useCallback((taskId, objectiveIndex) => {
-    const allTasks = getStoredTasks();
-    const task = allTasks.find(t => t.id === taskId);
-    if (!task) return;
-    
-    const completed = [...(task.completedObjectives || [])];
-    const idx = completed.indexOf(objectiveIndex);
-    if (idx >= 0) {
-      completed.splice(idx, 1);
-    } else {
-      completed.push(objectiveIndex);
-    }
-    
-    const updated = allTasks.map(t => t.id === taskId ? { ...t, completedObjectives: completed } : t);
-    saveTasks(updated);
-    setTasks(updated);
+    setTasks(prev => {
+      const task = prev.find(t => t.id === taskId);
+      if (!task) return prev;
+      
+      const completed = [...(task.completedObjectives || [])];
+      const idx = completed.indexOf(objectiveIndex);
+      if (idx >= 0) completed.splice(idx, 1);
+      else completed.push(objectiveIndex);
+      
+      const updatedTask = { ...task, completedObjectives: completed };
+      supabase.from('tasks').update({ completedObjectives: completed }).eq('id', taskId).then();
+      
+      return prev.map(t => t.id === taskId ? updatedTask : t);
+    });
   }, []);
 
   const addCallLog = useCallback((taskId, logEntry) => {
-    const allTasks = getStoredTasks();
-    const task = allTasks.find(t => t.id === taskId);
-    if (!task) return;
-    
-    const callLog = [...(task.callLog || []), {
-      id: `call-${Date.now()}`,
-      businessName: logEntry.businessName,
-      phone: logEntry.phone,
-      outcome: logEntry.outcome, // 'answered', 'no-answer', 'callback', 'interested', 'rejected'
-      notes: logEntry.notes || '',
-      calledAt: new Date().toISOString(),
-    }];
-    
-    const updated = allTasks.map(t => t.id === taskId ? { ...t, callLog } : t);
-    saveTasks(updated);
-    setTasks(updated);
+    setTasks(prev => {
+      const task = prev.find(t => t.id === taskId);
+      if (!task) return prev;
+      
+      const callLog = [...(task.callLog || []), {
+        id: `call-${Date.now()}`,
+        businessName: logEntry.businessName,
+        phone: logEntry.phone,
+        outcome: logEntry.outcome,
+        notes: logEntry.notes || '',
+        calledAt: new Date().toISOString(),
+      }];
+      
+      const updatedTask = { ...task, callLog };
+      supabase.from('tasks').update({ callLog }).eq('id', taskId).then();
+      
+      return prev.map(t => t.id === taskId ? updatedTask : t);
+    });
   }, []);
 
   const addNote = useCallback((taskId, note) => {
-    const allTasks = getStoredTasks();
-    const task = allTasks.find(t => t.id === taskId);
-    if (!task) return;
-    
-    const notes = [...(task.notes || []), {
-      id: `note-${Date.now()}`,
-      text: note,
-      createdAt: new Date().toISOString(),
-    }];
-    
-    const updated = allTasks.map(t => t.id === taskId ? { ...t, notes } : t);
-    saveTasks(updated);
-    setTasks(updated);
+    setTasks(prev => {
+      const task = prev.find(t => t.id === taskId);
+      if (!task) return prev;
+      
+      const notes = [...(task.notes || []), {
+        id: `note-${Date.now()}`,
+        text: note,
+        createdAt: new Date().toISOString(),
+      }];
+      
+      const updatedTask = { ...task, notes };
+      supabase.from('tasks').update({ notes }).eq('id', taskId).then();
+      
+      return prev.map(t => t.id === taskId ? updatedTask : t);
+    });
   }, []);
 
   const getTasksForUser = useCallback((userId) => {
-    return getStoredTasks().filter(t => t.assignedTo === userId);
-  }, []);
+    return tasks.filter(t => t.assignedTo === userId);
+  }, [tasks]);
 
   const getTasksForToday = useCallback((userId) => {
     const today = new Date().toISOString().split('T')[0];
-    return getStoredTasks().filter(t => t.assignedTo === userId && t.dueDate === today);
-  }, []);
+    return tasks.filter(t => t.assignedTo === userId && t.dueDate === today);
+  }, [tasks]);
 
-  const getAllTasks = useCallback(() => {
-    return getStoredTasks();
-  }, []);
+  const getAllTasks = useCallback(() => { return tasks; }, [tasks]);
 
   const assignBusinesses = useCallback((taskId, businesses) => {
-    const allTasks = getStoredTasks();
-    const updated = allTasks.map(t => t.id === taskId ? { ...t, businesses } : t);
-    saveTasks(updated);
-    setTasks(updated);
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, businesses } : t));
+    supabase.from('tasks').update({ businesses }).eq('id', taskId).then();
   }, []);
 
   const addJournalEntry = useCallback((userId, text) => {
@@ -163,15 +178,14 @@ export function TaskProvider({ children }) {
       createdAt: new Date().toISOString(),
       date: new Date().toISOString().split('T')[0],
     };
-    const updated = [...getStoredJournals(), newEntry];
-    saveJournals(updated);
-    setJournals(updated);
+    
+    setJournals(prev => [...prev, newEntry]);
+    supabase.from('journals').insert([newEntry]).then();
+    
     return newEntry;
   }, []);
 
-  const getAllJournals = useCallback(() => {
-    return getStoredJournals();
-  }, []);
+  const getAllJournals = useCallback(() => { return journals; }, [journals]);
 
   return (
     <TaskContext.Provider value={{
