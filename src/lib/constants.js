@@ -2,6 +2,7 @@ export const INDUSTRIES = [
   { value: 'all', label: 'All Industries', icon: '🏢', query: '' },
   { value: 'restaurant', label: 'Restaurants & Cafes', icon: '🍽️', query: 'restaurants' },
   { value: 'hotel', label: 'Hotels & Hospitality', icon: '🏨', query: 'hotels' },
+  { value: 'hospital', label: 'Hospitals & Clinics', icon: '🏥', query: 'hospitals' },
   { value: 'retail', label: 'Retail & Shopping', icon: '🛍️', query: 'retail stores' },
   { value: 'saas', label: 'SaaS & Tech Companies', icon: '💻', query: 'software companies' },
   { value: 'healthcare', label: 'Healthcare & Wellness', icon: '🏥', query: 'healthcare clinics' },
@@ -17,48 +18,69 @@ export const INDUSTRIES = [
   { value: 'cleaning', label: 'Cleaning Services', icon: '🧹', query: 'cleaning services' },
   { value: 'plumbing', label: 'Plumbing & HVAC', icon: '🔧', query: 'plumbing hvac' },
   { value: 'dental', label: 'Dental Clinics', icon: '🦷', query: 'dental clinics' },
+  { value: 'pharmacy', label: 'Pharmacies', icon: '💊', query: 'pharmacies' },
+  { value: 'coaching', label: 'Coaching Centers', icon: '📚', query: 'coaching centers' },
 ];
 
+export const POPULAR_LOCATIONS = [
+  // India - Major Cities
+  { label: 'Hyderabad, Telangana', value: 'Hyderabad, Telangana, India' },
+  { label: 'Bangalore, Karnataka', value: 'Bangalore, Karnataka, India' },
+  { label: 'Mumbai, Maharashtra', value: 'Mumbai, Maharashtra, India' },
+  { label: 'New Delhi', value: 'New Delhi, India' },
+  { label: 'Chennai, Tamil Nadu', value: 'Chennai, Tamil Nadu, India' },
+  { label: 'Pune, Maharashtra', value: 'Pune, Maharashtra, India' },
+  { label: 'Kolkata, West Bengal', value: 'Kolkata, West Bengal, India' },
+  // India - Tier 2/3 Cities (user's area)
+  { label: 'Madanapalli, Andhra Pradesh', value: 'Madanapalle, Annamayya, Andhra Pradesh, India' },
+  { label: 'Tirupati, Andhra Pradesh', value: 'Tirupati, Andhra Pradesh, India' },
+  { label: 'Chittoor, Andhra Pradesh', value: 'Chittoor, Andhra Pradesh, India' },
+  { label: 'Kadapa, Andhra Pradesh', value: 'Kadapa, Andhra Pradesh, India' },
+  { label: 'Kurnool, Andhra Pradesh', value: 'Kurnool, Andhra Pradesh, India' },
+  { label: 'Anantapur, Andhra Pradesh', value: 'Anantapur, Andhra Pradesh, India' },
+  { label: 'Vijayawada, Andhra Pradesh', value: 'Vijayawada, Andhra Pradesh, India' },
+  { label: 'Visakhapatnam, Andhra Pradesh', value: 'Visakhapatnam, Andhra Pradesh, India' },
+  { label: 'Nellore, Andhra Pradesh', value: 'Nellore, Andhra Pradesh, India' },
+  { label: 'Warangal, Telangana', value: 'Warangal, Telangana, India' },
+  { label: 'Coimbatore, Tamil Nadu', value: 'Coimbatore, Tamil Nadu, India' },
+  { label: 'Mysore, Karnataka', value: 'Mysore, Karnataka, India' },
+  { label: 'Vizag, Andhra Pradesh', value: 'Visakhapatnam, Andhra Pradesh, India' },
+  // International
+  { label: 'Dubai, UAE', value: 'Dubai, UAE' },
+  { label: 'New York, USA', value: 'New York City, USA' },
+  { label: 'London, UK', value: 'London, United Kingdom' },
+  { label: 'Singapore', value: 'Singapore' },
+  { label: 'Toronto, Canada', value: 'Toronto, Canada' },
+  { label: 'Sydney, Australia', value: 'Sydney, Australia' },
+];
+
+// Legacy - kept for backward compatibility
 export const COUNTRIES = [
-  {
-    value: 'us',
-    label: '🇺🇸 United States',
-    cities: [
-      { value: 'newark-nj', label: 'Newark, New Jersey', lat: 40.7357, lng: -74.1724 },
-      { value: 'washington-dc', label: 'Washington, D.C.', lat: 38.9072, lng: -77.0369 },
-      { value: 'new-york', label: 'New York City, NY', lat: 40.7128, lng: -74.0060 },
-      { value: 'jersey-city', label: 'Jersey City, NJ', lat: 40.7178, lng: -74.0431 },
-      { value: 'los-angeles', label: 'Los Angeles, CA', lat: 34.0522, lng: -118.2437 },
-      { value: 'chicago', label: 'Chicago, IL', lat: 41.8781, lng: -87.6298 },
-      { value: 'houston', label: 'Houston, TX', lat: 29.7604, lng: -95.3698 },
-      { value: 'miami', label: 'Miami, FL', lat: 25.7617, lng: -80.1918 },
-      { value: 'dallas', label: 'Dallas, TX', lat: 32.7767, lng: -96.7970 },
-      { value: 'atlanta', label: 'Atlanta, GA', lat: 33.7490, lng: -84.3880 },
-      { value: 'philadelphia', label: 'Philadelphia, PA', lat: 39.9526, lng: -75.1652 },
-      { value: 'san-francisco', label: 'San Francisco, CA', lat: 37.7749, lng: -122.4194 },
-    ],
-  },
   {
     value: 'in',
     label: '🇮🇳 India',
     cities: [
+      { value: 'madanapalli', label: 'Madanapalli, AP', lat: 13.5500, lng: 78.5000 },
       { value: 'hyderabad', label: 'Hyderabad', lat: 17.3850, lng: 78.4867 },
       { value: 'bangalore', label: 'Bangalore', lat: 12.9716, lng: 77.5946 },
       { value: 'mumbai', label: 'Mumbai', lat: 19.0760, lng: 72.8777 },
       { value: 'delhi', label: 'New Delhi', lat: 28.6139, lng: 77.2090 },
       { value: 'chennai', label: 'Chennai', lat: 13.0827, lng: 80.2707 },
-      { value: 'pune', label: 'Pune', lat: 18.5204, lng: 73.8567 },
-      { value: 'kolkata', label: 'Kolkata', lat: 22.5726, lng: 88.3639 },
+      { value: 'tirupati', label: 'Tirupati', lat: 13.6288, lng: 79.4192 },
+      { value: 'chittoor', label: 'Chittoor', lat: 13.2172, lng: 79.1003 },
+      { value: 'vijayawada', label: 'Vijayawada', lat: 16.5062, lng: 80.6480 },
+      { value: 'visakhapatnam', label: 'Visakhapatnam', lat: 17.6868, lng: 83.2185 },
     ],
   },
   {
-    value: 'uk',
-    label: '🇬🇧 United Kingdom',
+    value: 'us',
+    label: '🇺🇸 United States',
     cities: [
-      { value: 'london', label: 'London', lat: 51.5074, lng: -0.1278 },
-      { value: 'manchester', label: 'Manchester', lat: 53.4808, lng: -2.2426 },
-      { value: 'birmingham', label: 'Birmingham', lat: 52.4862, lng: -1.8904 },
-      { value: 'edinburgh', label: 'Edinburgh', lat: 55.9533, lng: -3.1883 },
+      { value: 'new-york', label: 'New York City, NY', lat: 40.7128, lng: -74.0060 },
+      { value: 'los-angeles', label: 'Los Angeles, CA', lat: 34.0522, lng: -118.2437 },
+      { value: 'chicago', label: 'Chicago, IL', lat: 41.8781, lng: -87.6298 },
+      { value: 'houston', label: 'Houston, TX', lat: 29.7604, lng: -95.3698 },
+      { value: 'miami', label: 'Miami, FL', lat: 25.7617, lng: -80.1918 },
     ],
   },
   {
@@ -67,57 +89,14 @@ export const COUNTRIES = [
     cities: [
       { value: 'dubai', label: 'Dubai', lat: 25.2048, lng: 55.2708 },
       { value: 'abu-dhabi', label: 'Abu Dhabi', lat: 24.4539, lng: 54.3773 },
-      { value: 'sharjah', label: 'Sharjah', lat: 25.3463, lng: 55.4209 },
     ],
   },
   {
-    value: 'ca',
-    label: '🇨🇦 Canada',
+    value: 'uk',
+    label: '🇬🇧 United Kingdom',
     cities: [
-      { value: 'toronto', label: 'Toronto', lat: 43.6532, lng: -79.3832 },
-      { value: 'vancouver', label: 'Vancouver', lat: 49.2827, lng: -123.1207 },
-      { value: 'montreal', label: 'Montreal', lat: 45.5017, lng: -73.5673 },
-    ],
-  },
-  {
-    value: 'au',
-    label: '🇦🇺 Australia',
-    cities: [
-      { value: 'sydney', label: 'Sydney', lat: -33.8688, lng: 151.2093 },
-      { value: 'melbourne', label: 'Melbourne', lat: -37.8136, lng: 144.9631 },
-      { value: 'brisbane', label: 'Brisbane', lat: -27.4698, lng: 153.0251 },
-    ],
-  },
-  {
-    value: 'de',
-    label: '🇩🇪 Germany',
-    cities: [
-      { value: 'berlin', label: 'Berlin', lat: 52.5200, lng: 13.4050 },
-      { value: 'munich', label: 'Munich', lat: 48.1351, lng: 11.5820 },
-      { value: 'hamburg', label: 'Hamburg', lat: 53.5511, lng: 9.9937 },
-    ],
-  },
-  {
-    value: 'sg',
-    label: '🇸🇬 Singapore',
-    cities: [
-      { value: 'singapore', label: 'Singapore', lat: 1.3521, lng: 103.8198 },
-    ],
-  },
-  {
-    value: 'jp',
-    label: '🇯🇵 Japan',
-    cities: [
-      { value: 'tokyo', label: 'Tokyo', lat: 35.6762, lng: 139.6503 },
-      { value: 'osaka', label: 'Osaka', lat: 34.6937, lng: 135.5023 },
-    ],
-  },
-  {
-    value: 'br',
-    label: '🇧🇷 Brazil',
-    cities: [
-      { value: 'sao-paulo', label: 'São Paulo', lat: -23.5505, lng: -46.6333 },
-      { value: 'rio', label: 'Rio de Janeiro', lat: -22.9068, lng: -43.1729 },
+      { value: 'london', label: 'London', lat: 51.5074, lng: -0.1278 },
+      { value: 'manchester', label: 'Manchester', lat: 53.4808, lng: -2.2426 },
     ],
   },
 ];

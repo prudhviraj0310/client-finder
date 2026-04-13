@@ -1,15 +1,24 @@
-import './globals.css';
+'use client';
 
-export const metadata = {
-  title: 'Client Finder — Target · Analyze · Convert',
-  description: 'AI-powered autonomous client acquisition platform',
-  keywords: 'client acquisition, business intelligence, personalized outreach, lead generation',
-};
+import './globals.css';
+import { AuthProvider } from '@/lib/AuthContext';
+import { TaskProvider } from '@/lib/TaskContext';
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <head>
+        <title>Client Finder — Target · Analyze · Convert</title>
+        <meta name="description" content="AI-powered autonomous client acquisition platform" />
+        <meta name="keywords" content="client acquisition, business intelligence, personalized outreach, lead generation" />
+      </head>
+      <body>
+        <AuthProvider>
+          <TaskProvider>
+            {children}
+          </TaskProvider>
+        </AuthProvider>
+      </body>
     </html>
   );
 }

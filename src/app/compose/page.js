@@ -9,7 +9,7 @@ import { MESSAGE_TONES, CHANNELS } from '@/lib/constants';
 import {
   PenTool, Sparkles, Copy, Send, RefreshCw,
   Building2, User, Clock, ChevronRight, Check,
-  Mail, Briefcase, MessageCircle, Eye, Layers, ArrowLeft
+  Mail, Briefcase, MessageCircle, Eye, Layers, ArrowLeft, AlertTriangle
 } from 'lucide-react';
 
 function ComposeContent() {

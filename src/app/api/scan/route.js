@@ -1,44 +1,53 @@
 import { NextResponse } from 'next/server';
 
-// Nomination API — very fast, reliable OSM search
-const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/search';
+// Google Places API (New) — primary source for real data
+const GOOGLE_PLACES_URL = 'https://places.googleapis.com/v1/places:searchText';
 
-// Overpass as secondary source
+// Fallback: Nominatim + Overpass
+const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/search';
 const OVERPASS_SERVERS = [
   'https://overpass-api.de/api/interpreter',
   'https://overpass.kumi.systems/api/interpreter',
 ];
 
-const INDUSTRY_OSM_TAGS = {
-  'restaurants': 'restaurant',
-  'hotels': 'hotel',
-  'retail stores': 'shop',
-  'software companies': 'office',
-  'healthcare clinics': 'clinic',
-  'real estate agencies': 'estate_agent',
-  'schools academies': 'school',
-  'gyms fitness centers': 'fitness_centre',
-  'beauty salons': 'beauty',
-  'car dealerships auto repair': 'car_repair',
-  'law firms attorneys': 'lawyer',
-  'financial services': 'bank',
-  'construction companies': 'construction',
-  'marketing agencies': 'advertising',
-  'cleaning services': 'cleaning',
-  'plumbing hvac': 'plumber',
-  'dental clinics': 'dentist',
-  '': 'restaurant',
+const INDUSTRY_QUERIES = {
+  'restaurants': 'restaurants',
+  'hotels': 'hotels',
+  'hospitals': 'hospitals',
+  'retail stores': 'retail shops stores',
+  'software companies': 'software IT companies',
+  'healthcare clinics': 'clinics healthcare',
+  'real estate agencies': 'real estate agencies',
+  'schools academies': 'schools colleges',
+  'gyms fitness centers': 'gym fitness center',
+  'beauty salons': 'beauty salon parlour',
+  'car dealerships auto repair': 'car repair auto service',
+  'law firms attorneys': 'law firm advocate',
+  'financial services': 'bank finance',
+  'construction companies': 'construction builders',
+  'marketing agencies': 'marketing advertising agency',
+  'cleaning services': 'cleaning services',
+  'plumbing hvac': 'plumber HVAC',
+  'dental clinics': 'dental clinic dentist',
+  'pharmacies': 'pharmacy medical shop',
+  'coaching centers': 'coaching center tuition classes',
+  '': 'businesses',
 };
 
 const INDUSTRY_ICONS = {
-  'restaurant': '🍽️', 'hotel': '🏨', 'shop': '🛍️', 'office': '💻',
-  'clinic': '🏥', 'estate_agent': '🏗️', 'school': '🎓', 'fitness_centre': '💪',
-  'beauty': '💇', 'car_repair': '🚗', 'lawyer': '⚖️', 'bank': '🏦',
-  'construction': '🔨', 'advertising': '📣', 'cleaning': '🧹', 'plumber': '🔧',
-  'dentist': '🦷',
+  'restaurants': '🍽️', 'hotels': '🏨', 'hospitals': '🏥',
+  'retail stores': '🛍️', 'software companies': '💻',
+  'healthcare clinics': '🏥', 'real estate agencies': '🏗️',
+  'schools academies': '🎓', 'gyms fitness centers': '💪',
+  'beauty salons': '💇', 'car dealerships auto repair': '🚗',
+  'law firms attorneys': '⚖️', 'financial services': '🏦',
+  'construction companies': '🔨', 'marketing agencies': '📣',
+  'cleaning services': '🧹', 'plumbing hvac': '🔧',
+  'dental clinics': '🦷', 'pharmacies': '💊',
+  'coaching centers': '📚',
 };
 
-async function fetchWithTimeout(url, options = {}, timeoutMs = 10000) {
+async function fetchWithTimeout(url, options = {}, timeoutMs = 15000) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -48,63 +57,272 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 10000) {
   }
 }
 
-// Strategy 1: Nominatim search (fast, reliable)
-async function searchNominatim(lat, lng, industry, radius) {
-  const tag = INDUSTRY_OSM_TAGS[industry] || 'restaurant';
-  const industryLabel = industry || 'restaurants';
+// =============================================
+// STRATEGY 1: Google Places API (New) — BEST DATA
+// =============================================
+async function searchGooglePlaces(location, industry, radius) {
+  const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+  if (!apiKey) throw new Error('NO_GOOGLE_KEY');
 
-  // Calculate rough bounding box from radius
-  const latDelta = (radius / 1000) / 111.32;
-  const lngDelta = (radius / 1000) / (111.32 * Math.cos(lat * Math.PI / 180));
+  const query = INDUSTRY_QUERIES[industry] || industry || 'businesses';
+  const textQuery = `${query} in ${location}`;
+
+  const response = await fetchWithTimeout(GOOGLE_PLACES_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Goog-Api-Key': apiKey,
+      'X-Goog-FieldMask': [
+        'places.id',
+        'places.displayName',
+        'places.formattedAddress',
+        'places.nationalPhoneNumber',
+        'places.internationalPhoneNumber',
+        'places.rating',
+        'places.userRatingCount',
+        'places.websiteUri',
+        'places.googleMapsUri',
+        'places.types',
+        'places.reviews',
+        'places.location',
+        'places.businessStatus',
+        'places.primaryType',
+        'places.regularOpeningHours',
+      ].join(','),
+    },
+    body: JSON.stringify({
+      textQuery,
+      maxResultCount: 20,
+      languageCode: 'en',
+    }),
+  }, 12000);
+
+  if (!response.ok) {
+    const errBody = await response.text();
+    console.error('Google Places error:', response.status, errBody);
+    throw new Error(`Google Places API error: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+function processGoogleResults(data, industry) {
+  const places = data.places || [];
+  const icon = INDUSTRY_ICONS[industry] || '🏢';
+
+  return places
+    .filter(p => p.displayName?.text)
+    .map(p => {
+      const name = p.displayName?.text || '';
+      const phone = p.nationalPhoneNumber || p.internationalPhoneNumber || '';
+      const website = p.websiteUri || '';
+      const hasWebsite = !!website;
+      const rating = p.rating || 0;
+      const reviews = p.userRatingCount || 0;
+      const address = p.formattedAddress || '';
+      const lat = p.location?.latitude || 0;
+      const lng = p.location?.longitude || 0;
+
+      // Extract review texts
+      const reviewSnippets = (p.reviews || []).slice(0, 3).map(r => ({
+        text: r.text?.text || '',
+        rating: r.rating || 0,
+        author: r.authorAttribution?.displayName || 'Anonymous',
+        time: r.relativePublishTimeDescription || '',
+      }));
+
+      // Opening hours
+      const openingHours = p.regularOpeningHours?.weekdayDescriptions?.join(', ') || '';
+
+      // Digital score
+      let digitalScore = 0;
+      if (hasWebsite) digitalScore += 30;
+      if (phone) digitalScore += 15;
+      if (rating > 0) digitalScore += 10;
+      if (reviews > 10) digitalScore += 10;
+      if (reviews > 50) digitalScore += 5;
+      if (openingHours) digitalScore += 10;
+      if (reviewSnippets.length > 0) digitalScore += 5;
+      digitalScore = Math.min(digitalScore, 100);
+
+      const missingItems = [];
+      if (!hasWebsite) missingItems.push('No Website');
+      if (!phone) missingItems.push('No Phone Listed');
+      if (rating === 0) missingItems.push('No Rating');
+      if (reviews < 5) missingItems.push('Few Reviews');
+      if (!openingHours) missingItems.push('No Hours Listed');
+
+      return {
+        id: `gp-${p.id}`,
+        name,
+        industry: industry || 'business',
+        icon,
+        rating,
+        reviews,
+        reviewSnippets,
+        address,
+        city: '',
+        country: '',
+        lat,
+        lng,
+        phone,
+        email: '',
+        website,
+        hasWebsite,
+        googleMapsUrl: p.googleMapsUri || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}+${encodeURIComponent(address)}`,
+        primaryCategory: p.primaryType || industry || '',
+        businessStatus: p.businessStatus || 'OPERATIONAL',
+        cuisine: '',
+        digitalScore,
+        missingItems,
+        socialMedia: {},
+        isChain: false,
+        chainName: null,
+        openingHours,
+        source: 'google',
+      };
+    })
+    .sort((a, b) => a.digitalScore - b.digitalScore);
+}
+
+// =============================================
+// STRATEGY 2: Nominatim — FREE FALLBACK
+// =============================================
+async function searchNominatim(location, industry, radius) {
+  const NOMINATIM_MAP = {
+    'schools academies': 'college',
+    'restaurants': 'restaurant',
+    'hotels': 'hotel',
+    'hospitals': 'hospital',
+    'retail stores': 'shop',
+    'software companies': 'software',
+    'healthcare clinics': 'clinic',
+    'real estate agencies': 'real estate',
+    'gyms fitness centers': 'gym',
+    'beauty salons': 'salon',
+    'car dealerships auto repair': 'car repair',
+    'law firms attorneys': 'lawyer',
+    'financial services': 'bank',
+    'construction companies': 'construction',
+    'marketing agencies': 'marketing',
+    'plumbing hvac': 'plumber',
+    'dental clinics': 'dentist',
+    'pharmacies': 'pharmacy',
+    'coaching centers': 'school',
+  };
+
+  const query = NOMINATIM_MAP[industry] || (INDUSTRY_QUERIES[industry] || industry || 'businesses').split(' ')[0];
 
   const url = new URL(NOMINATIM_URL);
-  url.searchParams.set('q', `${industryLabel}`);
+  url.searchParams.set('q', `${query} in ${location}`);
   url.searchParams.set('format', 'json');
-  url.searchParams.set('limit', '50');
+  url.searchParams.set('limit', '30');
   url.searchParams.set('addressdetails', '1');
   url.searchParams.set('extratags', '1');
   url.searchParams.set('namedetails', '1');
-  url.searchParams.set('viewbox', `${lng - lngDelta},${lat + latDelta},${lng + lngDelta},${lat - latDelta}`);
-  url.searchParams.set('bounded', '1');
 
   const response = await fetchWithTimeout(url.toString(), {
-    headers: {
-      'User-Agent': 'ClientFinder/1.0 (Business Scanner)',
-    },
-  }, 8000);
+    headers: { 'User-Agent': 'ClientFinder/2.0 (Business Scanner)' },
+  }, 10000);
 
   if (!response.ok) throw new Error(`Nominatim error: ${response.status}`);
   return response.json();
 }
 
-// Strategy 2: Overpass (backup, more data but slower)
-async function searchOverpass(lat, lng, industry, radius) {
-  const tag = INDUSTRY_OSM_TAGS[industry] || 'restaurant';
-  const radiusM = Math.min(radius, 10000);
+function processNominatimResults(results, industry) {
+  const icon = INDUSTRY_ICONS[industry] || '🏢';
 
-  // Simple, fast query
+  return results
+    .filter(r => r.name && r.name.length > 1)
+    .filter(r => {
+      const nameLower = (r.namedetails?.name || r.name).toLowerCase();
+      if (nameLower.includes('temple') || nameLower.includes('mandir') || nameLower.includes('church') || nameLower.includes('mosque')) {
+        return false;
+      }
+      return true;
+    })
+    .map(r => {
+      const ext = r.extratags || {};
+      const addr = r.address || {};
+      const phone = ext.phone || ext['contact:phone'] || '';
+      const website = ext.website || ext['contact:website'] || ext.url || '';
+      const hasWebsite = !!website;
+      const email = ext.email || ext['contact:email'] || '';
+      const openingHours = ext.opening_hours || '';
+      const addressStr = r.display_name?.split(',').slice(0, 3).join(',') || '';
+
+      let digitalScore = 0;
+      if (hasWebsite) digitalScore += 30;
+      if (phone) digitalScore += 15;
+      if (email) digitalScore += 10;
+      if (openingHours) digitalScore += 10;
+      if (addressStr) digitalScore += 5;
+      digitalScore = Math.min(digitalScore, 100);
+
+      const missingItems = [];
+      if (!hasWebsite) missingItems.push('No Website');
+      if (!phone) missingItems.push('No Phone Listed');
+      if (!email) missingItems.push('No Email');
+      if (!openingHours) missingItems.push('No Hours');
+
+      const bName = r.namedetails?.name || r.name;
+      return {
+        id: `osm-${r.osm_type}-${r.osm_id}`,
+        name: bName,
+        industry: industry || 'business',
+        icon,
+        rating: 0,
+        reviews: 0,
+        reviewSnippets: [],
+        address: addressStr,
+        city: addr.city || addr.town || addr.village || '',
+        country: addr.country || '',
+        lat: parseFloat(r.lat),
+        lng: parseFloat(r.lon),
+        phone,
+        email,
+        website,
+        hasWebsite,
+        googleMapsUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(bName)}+${encodeURIComponent(addressStr)}`,
+        primaryCategory: r.type || industry || '',
+        businessStatus: 'OPERATIONAL',
+        cuisine: ext.cuisine || '',
+        digitalScore,
+        missingItems,
+        socialMedia: {},
+        isChain: !!ext.brand,
+        chainName: ext.brand || null,
+        openingHours,
+        source: 'nominatim',
+      };
+    })
+    .sort((a, b) => a.digitalScore - b.digitalScore);
+}
+
+// =============================================
+// STRATEGY 3: Overpass — BACKUP
+// =============================================
+async function searchOverpass(lat, lng, industry, radius) {
   const amenityMap = {
-    'restaurant': 'amenity=restaurant',
-    'hotel': 'tourism=hotel',
-    'shop': 'shop',
-    'clinic': 'amenity~"clinic|doctors|hospital"',
-    'school': 'amenity~"school|college|university"',
-    'fitness_centre': 'leisure=fitness_centre',
-    'beauty': 'shop~"beauty|hairdresser"',
-    'car_repair': 'shop~"car|car_repair"',
-    'lawyer': 'office~"lawyer|attorney"',
-    'bank': 'amenity=bank',
-    'dentist': 'amenity=dentist',
-    'estate_agent': 'office=estate_agent',
-    'office': 'office',
-    'construction': 'office=construction',
-    'advertising': 'office~"advertising|marketing"',
-    'cleaning': 'shop=cleaning',
-    'plumber': 'craft~"plumber|hvac"',
+    'restaurants': 'amenity=restaurant',
+    'hotels': 'tourism=hotel',
+    'hospitals': 'amenity~"hospital|clinic|doctors"',
+    'retail stores': 'shop',
+    'healthcare clinics': 'amenity~"clinic|doctors|hospital"',
+    'schools academies': 'amenity~"school|college|university"',
+    'gyms fitness centers': 'leisure=fitness_centre',
+    'beauty salons': 'shop~"beauty|hairdresser"',
+    'car dealerships auto repair': 'shop~"car|car_repair"',
+    'law firms attorneys': 'office~"lawyer|attorney"',
+    'financial services': 'amenity=bank',
+    'dental clinics': 'amenity=dentist',
+    'pharmacies': 'amenity=pharmacy',
+    'coaching centers': 'amenity~"school|college"',
   };
 
-  const osmFilter = amenityMap[tag] || 'amenity=restaurant';
-  const query = `[out:json][timeout:8];node[${osmFilter}](around:${radiusM},${lat},${lng});out body 50;`;
+  const radiusM = Math.min(radius, 15000);
+  const osmFilter = amenityMap[industry] || 'amenity';
+  const query = `[out:json][timeout:10];(node[${osmFilter}](around:${radiusM},${lat},${lng});way[${osmFilter}](around:${radiusM},${lat},${lng}););out body 30;`;
 
   for (const server of OVERPASS_SERVERS) {
     try {
@@ -112,175 +330,172 @@ async function searchOverpass(lat, lng, industry, radius) {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: `data=${encodeURIComponent(query)}`,
-      }, 10000);
+      }, 25000);
       if (response.ok) return response.json();
-    } catch (e) {
-      continue;
-    }
+    } catch (e) { continue; }
   }
   throw new Error('Overpass unavailable');
 }
 
-function processNominatimResults(results, industry) {
-  const tag = INDUSTRY_OSM_TAGS[industry] || 'restaurant';
-  const icon = INDUSTRY_ICONS[tag] || '🏢';
-
-  return results
-    .filter(r => r.name && r.name.length > 1)
-    .map(r => {
-      const ext = r.extratags || {};
-      const addr = r.address || {};
-
-      const hasWebsite = !!(ext.website || ext['contact:website'] || ext.url);
-      const website = ext.website || ext['contact:website'] || ext.url || '';
-      const phone = ext.phone || ext['contact:phone'] || '';
-      const email = ext.email || ext['contact:email'] || '';
-      const openingHours = ext.opening_hours || '';
-      const cuisine = ext.cuisine || '';
-      const brand = ext.brand || '';
-
-      const socialMedia = {};
-      if (ext['contact:facebook'] || ext.facebook) socialMedia.facebook = ext['contact:facebook'] || ext.facebook;
-      if (ext['contact:instagram'] || ext.instagram) socialMedia.instagram = ext['contact:instagram'] || ext.instagram;
-      if (ext['contact:twitter'] || ext.twitter) socialMedia.twitter = ext['contact:twitter'] || ext.twitter;
-
-      const addressStr = r.display_name?.split(',').slice(0, 3).join(',') || '';
-
-      let digitalScore = 0;
-      if (hasWebsite) digitalScore += 30;
-      if (phone) digitalScore += 10;
-      if (email) digitalScore += 10;
-      if (Object.keys(socialMedia).length > 0) digitalScore += 15;
-      if (openingHours) digitalScore += 10;
-      if (addressStr) digitalScore += 5;
-      if (cuisine) digitalScore += 5;
-      if (brand) digitalScore += 5;
-      digitalScore = Math.min(digitalScore, 100);
-
-      const missingItems = [];
-      if (!hasWebsite) missingItems.push('No Website');
-      if (!phone) missingItems.push('No Phone');
-      if (!email) missingItems.push('No Email');
-      if (!Object.keys(socialMedia).length) missingItems.push('No Social Media');
-      if (!openingHours) missingItems.push('No Hours');
-
-      const bLat = parseFloat(r.lat);
-      const bLng = parseFloat(r.lon);
-      const bName = r.namedetails?.name || r.name;
-      const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(bName)}+${encodeURIComponent(addressStr)}`;
-
-      return {
-        id: `osm-${r.osm_type}-${r.osm_id}`,
-        name: bName,
-        industry: tag,
-        icon,
-        rating: 0,
-        reviews: 0,
-        address: addressStr,
-        city: addr.city || addr.town || addr.village || '',
-        country: addr.country || '',
-        lat: bLat,
-        lng: bLng,
-        phone, email, website, hasWebsite,
-        googleMapsUrl,
-        primaryCategory: r.type || tag,
-        cuisine, digitalScore, missingItems, socialMedia,
-        isChain: !!brand, chainName: brand || null, openingHours,
-      };
-    })
-    .sort((a, b) => a.digitalScore - b.digitalScore);
-}
-
 function processOverpassResults(elements, industry) {
-  const tag = INDUSTRY_OSM_TAGS[industry] || 'restaurant';
-  const icon = INDUSTRY_ICONS[tag] || '🏢';
+  const icon = INDUSTRY_ICONS[industry] || '🏢';
 
   return elements
     .filter(el => el.tags && el.tags.name)
+    .filter(el => {
+      const nameLower = el.tags.name.toLowerCase();
+      if (nameLower.includes('temple') || nameLower.includes('mandir') || nameLower.includes('church') || nameLower.includes('mosque')) {
+        return false;
+      }
+      return true;
+    })
     .map(el => {
       const tags = el.tags;
-      const hasWebsite = !!(tags.website || tags['contact:website']);
-      const website = tags.website || tags['contact:website'] || '';
       const phone = tags.phone || tags['contact:phone'] || '';
+      const website = tags.website || tags['contact:website'] || '';
+      const hasWebsite = !!website;
       const email = tags.email || tags['contact:email'] || '';
       const openingHours = tags.opening_hours || '';
-
-      const socialMedia = {};
-      if (tags['contact:facebook']) socialMedia.facebook = tags['contact:facebook'];
-      if (tags['contact:instagram']) socialMedia.instagram = tags['contact:instagram'];
-
       const addr = [tags['addr:housenumber'], tags['addr:street'], tags['addr:city'], tags['addr:state']].filter(Boolean).join(', ');
 
       let digitalScore = 0;
       if (hasWebsite) digitalScore += 30;
-      if (phone) digitalScore += 10;
+      if (phone) digitalScore += 15;
       if (email) digitalScore += 10;
-      if (Object.keys(socialMedia).length > 0) digitalScore += 15;
       if (openingHours) digitalScore += 10;
       if (addr) digitalScore += 5;
-      if (tags.cuisine) digitalScore += 5;
-      if (tags.brand) digitalScore += 5;
       digitalScore = Math.min(digitalScore, 100);
 
       const missingItems = [];
       if (!hasWebsite) missingItems.push('No Website');
-      if (!phone) missingItems.push('No Phone');
+      if (!phone) missingItems.push('No Phone Listed');
       if (!email) missingItems.push('No Email');
-      if (!Object.keys(socialMedia).length) missingItems.push('No Social Media');
       if (!openingHours) missingItems.push('No Hours');
-
-      const bLat = el.lat || 0;
-      const bLng = el.lon || 0;
-      const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(tags.name)}+${encodeURIComponent(addr)}`;
 
       return {
         id: `osm-${el.id}`,
         name: tags.name,
-        industry: tag, icon,
-        rating: 0, reviews: 0,
+        industry: industry || 'business',
+        icon,
+        rating: 0,
+        reviews: 0,
+        reviewSnippets: [],
         address: addr,
         city: tags['addr:city'] || '',
         country: tags['addr:country'] || '',
-        lat: bLat, lng: bLng,
-        phone, email, website, hasWebsite,
-        googleMapsUrl,
-        primaryCategory: tags.amenity || tags.shop || tag,
+        lat: el.lat || el.center?.lat || 0,
+        lng: el.lon || el.center?.lon || 0,
+        phone,
+        email,
+        website,
+        hasWebsite,
+        googleMapsUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(tags.name)}+${encodeURIComponent(addr)}`,
+        primaryCategory: tags.amenity || tags.shop || industry || '',
+        businessStatus: 'OPERATIONAL',
         cuisine: tags.cuisine || '',
-        digitalScore, missingItems, socialMedia,
-        isChain: !!tags.brand, chainName: tags.brand || null, openingHours,
+        digitalScore,
+        missingItems,
+        socialMedia: {},
+        isChain: !!tags.brand,
+        chainName: tags.brand || null,
+        openingHours,
+        source: 'overpass',
       };
     })
     .sort((a, b) => a.digitalScore - b.digitalScore);
 }
 
+// =============================================
+// GEOCODE: Convert location text → lat/lng
+// =============================================
+async function geocodeLocation(locationText) {
+  const url = new URL(NOMINATIM_URL);
+  url.searchParams.set('q', locationText);
+  url.searchParams.set('format', 'json');
+  url.searchParams.set('limit', '1');
+
+  const response = await fetchWithTimeout(url.toString(), {
+    headers: { 'User-Agent': 'ClientFinder/2.0 (Geocoder)' },
+  }, 8000);
+
+  if (!response.ok) return null;
+  const results = await response.json();
+  if (results.length === 0) return null;
+  return { lat: parseFloat(results[0].lat), lng: parseFloat(results[0].lon) };
+}
+
+// =============================================
+// MAIN HANDLER
+// =============================================
 export async function POST(request) {
   try {
-    const { lat, lng, industry, radius = 5000 } = await request.json();
+    const { lat, lng, industry, radius = 5000, location } = await request.json();
+    const locationText = location || '';
 
-    // Try Nominatim first (fastest), fall back to Overpass
     let businesses = [];
     let source = '';
 
-    try {
-      const results = await searchNominatim(lat, lng, industry, radius);
-      businesses = processNominatimResults(results, industry);
-      source = 'Nominatim';
-    } catch (nomErr) {
-      console.log('Nominatim failed, trying Overpass:', nomErr.message);
+    // STRATEGY 1: Google Places (best data — real phone numbers, reviews)
+    if (process.env.GOOGLE_PLACES_API_KEY && locationText) {
       try {
-        const data = await searchOverpass(lat, lng, industry, radius);
-        businesses = processOverpassResults(data.elements || [], industry);
-        source = 'Overpass';
-      } catch (ovErr) {
-        console.error('Both sources failed:', ovErr.message);
-        return NextResponse.json(
-          { error: 'Search servers are busy. Please try again in a few seconds.' },
-          { status: 504 }
-        );
+        const data = await searchGooglePlaces(locationText, industry, radius);
+        businesses = processGoogleResults(data, industry);
+        source = 'Google Places';
+      } catch (err) {
+        console.log('Google Places failed:', err.message);
       }
     }
 
-    return NextResponse.json({ businesses, totalFound: businesses.length, source });
+    // STRATEGY 2: Overpass (needs lat/lng — gives better websites)
+    if (businesses.length === 0) {
+      let searchLat = lat;
+      let searchLng = lng;
+
+      // Geocode if we only have text
+      if (!searchLat && locationText) {
+        const coords = await geocodeLocation(locationText);
+        if (coords) {
+          searchLat = coords.lat;
+          searchLng = coords.lng;
+        }
+      }
+
+      if (searchLat && searchLng) {
+        try {
+          // Use default 15km if no radius provided or handle "all" conceptually with a generic large radius
+          const data = await searchOverpass(searchLat, searchLng, industry, radius || 20000);
+          businesses = processOverpassResults(data.elements || [], industry);
+          source = 'Overpass';
+        } catch (ovErr) {
+          console.error('Overpass also failed:', ovErr.message);
+        }
+      }
+    }
+
+    // STRATEGY 3: Nominatim (free, location-text based — last resort)
+    if (businesses.length === 0 && locationText) {
+      try {
+        const results = await searchNominatim(locationText, industry, radius);
+        businesses = processNominatimResults(results, industry);
+        source = 'Nominatim';
+      } catch (nomErr) {
+        console.log('Nominatim failed:', nomErr.message);
+      }
+    }
+
+    if (businesses.length === 0) {
+      return NextResponse.json(
+        { error: 'No businesses found. Try a different location or industry.' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      businesses,
+      totalFound: businesses.length,
+      source,
+      location: locationText,
+    });
   } catch (error) {
     console.error('Scan error:', error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
