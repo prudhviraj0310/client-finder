@@ -217,7 +217,7 @@ export default function LoginPage() {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
             <span>👑 Admin: <code style={{ color: 'var(--accent-cyan)' }}>admin / admin123</code></span>
-            <span>🧑‍💼 Member: <code style={{ color: 'var(--accent-cyan)' }}>member1 / member123</code></span>
+            <span>🧑‍💼 Team: <code style={{ color: 'var(--accent-cyan)' }}>imran, adharash, shahid / member123</code></span>
           </div>
         </div>
       </div>
