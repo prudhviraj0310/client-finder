@@ -91,8 +91,18 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = useCallback((username, password) => {
-    const user = users.find(u => u.username === username && u.password === password);
-    if (!user) return { success: false, error: 'Invalid username or password' };
+    const cleanUsername = (username || '').trim();
+    const cleanPassword = (password || '').trim();
+    
+    // Add debug logs to surface to browser console in production!
+    console.log("Login Attempt:", cleanUsername, cleanPassword);
+    console.log("Current Registered Users State:", users);
+
+    const user = users.find(u => u.username === cleanUsername && u.password === cleanPassword);
+    if (!user) {
+      console.error("Login verification failed. No matching user found in state!");
+      return { success: false, error: 'Invalid username or password' };
+    }
     
     setCurrentUser(user);
     localStorage.setItem('cf_session', JSON.stringify({ userId: user.id, loginAt: new Date().toISOString() }));
