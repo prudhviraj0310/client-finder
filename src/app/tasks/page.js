@@ -231,6 +231,8 @@ export default function TasksPage() {
   const [painPoints, setPainPoints] = useState(null);
   const [activeTab, setActiveTab] = useState('objectives');
   const [callForm, setCallForm] = useState({ businessName: '', phone: '', outcome: 'answered', notes: '' });
+  const [journalText, setJournalText] = useState('');
+  const { addJournalEntry } = useTasks();
 
   if (!currentUser) {
     router.push('/login');
@@ -291,6 +293,12 @@ export default function TasksPage() {
     setCallForm({ businessName: '', phone: '', outcome: 'answered', notes: '' });
   };
 
+  const handleSaveJournal = () => {
+    if (!journalText.trim()) return;
+    addJournalEntry(currentUser.id, journalText);
+    setJournalText('');
+  };
+
   const tabConfig = [
     { id: 'objectives', label: 'Objectives', icon: <Target size={14} /> },
     { id: 'businesses', label: 'Business List', icon: <Phone size={14} /> },
@@ -336,69 +344,94 @@ export default function TasksPage() {
               </div>
             )}
 
-            {myTasks.map((task, idx) => {
-              const completedCount = task.completedObjectives?.length || 0;
-              const totalCount = task.objectives?.length || 0;
-              const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
-              const isSelected = selectedTask?.id === task.id;
+            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {myTasks.map((task, idx) => {
+                const completedCount = task.completedObjectives?.length || 0;
+                const totalCount = task.objectives?.length || 0;
+                const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+                const isSelected = selectedTask?.id === task.id;
 
-              return (
-                <div
-                  key={task.id}
-                  onClick={() => selectTask(task)}
-                  className="glass-card"
-                  style={{
-                    padding: '16px', cursor: 'pointer',
-                    borderColor: isSelected ? 'var(--accent-cyan)' : undefined,
-                    background: isSelected ? 'var(--accent-cyan-dim)' : undefined,
-                    animation: `slideUp 300ms ease ${idx * 40}ms forwards`,
-                    opacity: 0,
-                  }}
-                >
-                  <div style={{ fontWeight: '700', fontSize: '0.9rem', marginBottom: '6px' }}>
-                    {task.title}
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginBottom: '10px' }}>
-                    📍 {task.location} · 🏢 {task.industry}
-                  </div>
-
-                  {/* Progress bar */}
-                  <div style={{
-                    height: '4px', background: 'var(--bg-tertiary)',
-                    borderRadius: '2px', overflow: 'hidden', marginBottom: '8px',
-                  }}>
-                    <div style={{
-                      width: `${progress}%`, height: '100%',
-                      background: progress === 100 ? 'var(--accent-emerald)' : 'var(--gradient-primary)',
-                      borderRadius: '2px', transition: 'width 500ms ease',
-                    }} />
-                  </div>
-
-                  <div style={{
-                    display: 'flex', justifyContent: 'space-between',
-                    fontSize: '0.7rem', color: 'var(--text-tertiary)',
-                  }}>
-                    <span>{completedCount}/{totalCount} objectives</span>
-                    <span>{task.callLog?.length || 0} calls</span>
-                  </div>
-
-                  {isAdmin && (
-                    <div style={{ marginTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span className="badge badge-cyan" style={{ fontSize: '0.6rem' }}>
-                        <Users size={10} /> {task.assignedTo}
-                      </span>
-                      <button
-                        className="btn btn-ghost btn-sm"
-                        onClick={(e) => { e.stopPropagation(); deleteTask(task.id); }}
-                        style={{ color: 'var(--accent-rose)', padding: '4px' }}
-                      >
-                        <Trash2 size={12} />
-                      </button>
+                return (
+                  <div
+                    key={task.id}
+                    onClick={() => selectTask(task)}
+                    className="glass-card"
+                    style={{
+                      padding: '16px', cursor: 'pointer',
+                      borderColor: isSelected ? 'var(--accent-cyan)' : undefined,
+                      background: isSelected ? 'var(--accent-cyan-dim)' : undefined,
+                      animation: `slideUp 300ms ease ${idx * 40}ms forwards`,
+                      opacity: 0, flexShrink: 0,
+                    }}
+                  >
+                    <div style={{ fontWeight: '700', fontSize: '0.9rem', marginBottom: '6px' }}>
+                      {task.title}
                     </div>
-                  )}
-                </div>
-              );
-            })}
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginBottom: '10px' }}>
+                      📍 {task.location} · 🏢 {task.industry}
+                    </div>
+
+                    {/* Progress bar */}
+                    <div style={{
+                      height: '4px', background: 'var(--bg-tertiary)',
+                      borderRadius: '2px', overflow: 'hidden', marginBottom: '8px',
+                    }}>
+                      <div style={{
+                        width: `${progress}%`, height: '100%',
+                        background: progress === 100 ? 'var(--accent-emerald)' : 'var(--gradient-primary)',
+                        borderRadius: '2px', transition: 'width 500ms ease',
+                      }} />
+                    </div>
+
+                    <div style={{
+                      display: 'flex', justifyContent: 'space-between',
+                      fontSize: '0.7rem', color: 'var(--text-tertiary)',
+                    }}>
+                      <span>{completedCount}/{totalCount} objectives</span>
+                      <span>{task.callLog?.length || 0} calls</span>
+                    </div>
+
+                    {isAdmin && (
+                      <div style={{ marginTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span className="badge badge-cyan" style={{ fontSize: '0.6rem' }}>
+                          <Users size={10} /> {task.assignedTo}
+                        </span>
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          onClick={(e) => { e.stopPropagation(); deleteTask(task.id); }}
+                          style={{ color: 'var(--accent-rose)', padding: '4px' }}
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Daily Journal Form */}
+            <div className="glass-card-static" style={{ padding: '16px', marginTop: '16px', flexShrink: 0, background: 'var(--bg-tertiary)' }}>
+              <h4 style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px', fontSize: '0.85rem' }}>
+                <BookOpen size={14} style={{ color: 'var(--accent-cyan)' }} /> Daily Journal
+              </h4>
+              <textarea
+                className="input"
+                placeholder="What did you learn today? Log your challenges and wins..."
+                rows={3}
+                style={{ resize: 'none', marginBottom: '12px', fontSize: '0.8rem', width: '100%' }}
+                value={journalText}
+                onChange={e => setJournalText(e.target.value)}
+              />
+              <button 
+                className="btn btn-primary btn-sm" 
+                style={{ width: '100%' }}
+                onClick={handleSaveJournal}
+                disabled={!journalText.trim()}
+              >
+                Submit Entry
+              </button>
+            </div>
           </div>
 
           {/* Task Detail (Right) */}

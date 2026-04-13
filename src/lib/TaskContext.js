@@ -15,11 +15,24 @@ function saveTasks(tasks) {
   localStorage.setItem('cf_tasks', JSON.stringify(tasks));
 }
 
+function getStoredJournals() {
+  if (typeof window === 'undefined') return [];
+  const stored = localStorage.getItem('cf_journals');
+  return stored ? JSON.parse(stored) : [];
+}
+
+function saveJournals(journals) {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem('cf_journals', JSON.stringify(journals));
+}
+
 export function TaskProvider({ children }) {
   const [tasks, setTasks] = useState([]);
+  const [journals, setJournals] = useState([]);
 
   useEffect(() => {
     setTasks(getStoredTasks());
+    setJournals(getStoredJournals());
   }, []);
 
   const createTask = useCallback((taskData) => {
@@ -142,6 +155,24 @@ export function TaskProvider({ children }) {
     setTasks(updated);
   }, []);
 
+  const addJournalEntry = useCallback((userId, text) => {
+    const newEntry = {
+      id: `journal-${Date.now()}`,
+      userId,
+      text,
+      createdAt: new Date().toISOString(),
+      date: new Date().toISOString().split('T')[0],
+    };
+    const updated = [...getStoredJournals(), newEntry];
+    saveJournals(updated);
+    setJournals(updated);
+    return newEntry;
+  }, []);
+
+  const getAllJournals = useCallback(() => {
+    return getStoredJournals();
+  }, []);
+
   return (
     <TaskContext.Provider value={{
       tasks,
@@ -155,6 +186,9 @@ export function TaskProvider({ children }) {
       getTasksForToday,
       getAllTasks,
       assignBusinesses,
+      journals,
+      addJournalEntry,
+      getAllJournals,
     }}>
       {children}
     </TaskContext.Provider>

@@ -15,19 +15,30 @@ const DEFAULT_ADMIN = {
 };
 
 const DEFAULT_MEMBERS = [
-  { id: 'member-1', username: 'member1', password: 'member123', name: 'Team Member 1', role: 'caller', avatar: '🧑‍💼', createdAt: new Date().toISOString() },
-  { id: 'member-2', username: 'member2', password: 'member123', name: 'Team Member 2', role: 'scanner', avatar: '👨‍💻', createdAt: new Date().toISOString() },
-  { id: 'member-3', username: 'member3', password: 'member123', name: 'Team Member 3', role: 'caller', avatar: '👩‍💼', createdAt: new Date().toISOString() },
-  { id: 'member-4', username: 'member4', password: 'member123', name: 'Team Member 4', role: 'closer', avatar: '🧑‍🚀', createdAt: new Date().toISOString() },
+  { id: 'imran', username: 'imran', password: 'member123', name: 'Imran', role: 'second-head', avatar: '👨‍💼', createdAt: new Date().toISOString() },
+  { id: 'adharash', username: 'adharash', password: 'member123', name: 'Adharash', role: 'caller', avatar: '🧑‍💻', createdAt: new Date().toISOString() },
+  { id: 'shahid', username: 'shahid', password: 'member123', name: 'Shahid', role: 'caller', avatar: '🧑‍🚀', createdAt: new Date().toISOString() },
 ];
 
 function getStoredUsers() {
   if (typeof window === 'undefined') return null;
   const stored = localStorage.getItem('cf_users');
-  if (stored) return JSON.parse(stored);
-  // Initialize with defaults
-  const users = [DEFAULT_ADMIN, ...DEFAULT_MEMBERS];
-  localStorage.setItem('cf_users', JSON.stringify(users));
+  let users = stored ? JSON.parse(stored) : [DEFAULT_ADMIN, ...DEFAULT_MEMBERS];
+  
+  // Migration: If the new 'imran' ID isn't in local storage, assume we need to upgrade the defaults.
+  // This helps apply the changes to the user's local instance immediately without cache clearing.
+  if (!users.some(u => u.id === 'imran')) {
+    // Retain only those who aren't the generic member defaults, plus add the real team
+    users = users.filter(u => u.id === 'admin' || (!u.id.startsWith('member-') && !u.id.match(/^member[0-9]+$/)));
+    users = [...users, ...DEFAULT_MEMBERS];
+    
+    // Ensure admin is still there
+    if (!users.some(u => u.id === 'admin')) users.unshift(DEFAULT_ADMIN);
+    
+    localStorage.setItem('cf_users', JSON.stringify(users));
+  }
+  
+  if (!stored) localStorage.setItem('cf_users', JSON.stringify(users));
   return users;
 }
 
@@ -91,7 +102,10 @@ export function AuthProvider({ children }) {
     const updated = allUsers.map(u => u.id === memberId ? { ...u, ...updates } : u);
     localStorage.setItem('cf_users', JSON.stringify(updated));
     setUsers(updated);
-  }, []);
+    if (currentUser?.id === memberId) {
+      setCurrentUser(prev => ({ ...prev, ...updates }));
+    }
+  }, [currentUser]);
 
   const deleteMember = useCallback((memberId) => {
     const allUsers = getStoredUsers() || [];

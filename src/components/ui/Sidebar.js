@@ -14,7 +14,22 @@ export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
-  const { currentUser, isAdmin, logout } = useAuth();
+  const { currentUser, isAdmin, logout, updateMember } = useAuth();
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editPassword, setEditPassword] = useState('');
+
+  // Setup form when clicking edit profile
+  const handleOpenProfile = () => {
+    setEditName(currentUser.name);
+    setEditPassword(currentUser.password);
+    setShowProfileModal(true);
+  };
+
+  const handleSaveProfile = () => {
+    updateMember(currentUser.id, { name: editName, password: editPassword });
+    setShowProfileModal(false);
+  };
 
   if (!currentUser) return null;
 
@@ -138,6 +153,19 @@ export default function Sidebar() {
               </div>
             </div>
             <button
+              onClick={handleOpenProfile}
+              className="nav-item-label"
+              style={{
+                background: 'none', border: 'none',
+                color: 'var(--text-tertiary)', cursor: 'pointer',
+                padding: '4px', borderRadius: 'var(--radius-sm)',
+                flexShrink: 0, marginRight: '4px'
+              }}
+              title="Edit Profile"
+            >
+              <Settings size={16} />
+            </button>
+            <button
               onClick={handleLogout}
               className="nav-item-label"
               style={{
@@ -163,6 +191,41 @@ export default function Sidebar() {
           {!collapsed && <span>Collapse</span>}
         </button>
       </div>
+
+      {showProfileModal && (
+        <div className="modal-backdrop">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h2>Edit Profile</h2>
+              <button className="btn btn-ghost" onClick={() => setShowProfileModal(false)}><ChevronLeft size={20} /></button>
+            </div>
+            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label className="label">Display Name</label>
+                <input 
+                  type="text" 
+                  className="input" 
+                  value={editName}
+                  onChange={e => setEditName(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="label">Password</label>
+                <input 
+                  type="text" 
+                  className="input" 
+                  value={editPassword}
+                  onChange={e => setEditPassword(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={() => setShowProfileModal(false)}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleSaveProfile}>Save Changes</button>
+            </div>
+          </div>
+        </div>
+      )}
     </aside>
   );
 }

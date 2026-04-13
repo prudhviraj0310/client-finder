@@ -3,11 +3,12 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/AuthContext';
+import { useTasks } from '@/lib/TaskContext';
 import Sidebar from '@/components/ui/Sidebar';
 import Header from '@/components/ui/Header';
 import {
   Users, Plus, Trash2, Edit3, Save, X, Shield,
-  Phone, Radar, Target, UserCheck, Crown, AlertTriangle
+  Phone, Radar, Target, UserCheck, Crown, AlertTriangle, BookOpen
 } from 'lucide-react';
 
 const ROLE_CONFIG = {
@@ -19,9 +20,11 @@ const ROLE_CONFIG = {
 const AVATARS = ['🧑‍💼', '👨‍💻', '👩‍💼', '🧑‍🚀', '👷', '🧑‍🔬', '👨‍🎨', '👩‍🏫'];
 
 export default function TeamPage() {
-  const { currentUser, isAdmin, getTeamMembers, addMember, updateMember, deleteMember } = useAuth();
+  const { currentUser, isAdmin, getTeamMembers, addMember, updateMember, deleteMember, users } = useAuth();
+  const { getAllJournals } = useTasks();
   const router = useRouter();
   const members = getTeamMembers();
+  const allJournals = getAllJournals();
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -306,6 +309,58 @@ export default function TeamPage() {
                 </div>
               )}
             </div>
+
+            {/* Team Journals Section */}
+            <div style={{ marginTop: '40px' }}>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px',
+              }}>
+                <BookOpen size={20} style={{ color: 'var(--accent-cyan)' }} />
+                <h2 style={{ fontSize: '1.2rem', margin: 0 }}>Team Journals</h2>
+              </div>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {allJournals.length === 0 ? (
+                  <div style={{
+                    textAlign: 'center', padding: '40px 20px',
+                    color: 'var(--text-muted)', background: 'var(--bg-tertiary)',
+                    borderRadius: 'var(--radius-lg)'
+                  }}>
+                    <p style={{ fontSize: '0.85rem' }}>No journals submitted yet by the team.</p>
+                  </div>
+                ) : (
+                  [...allJournals].reverse().map((journal) => {
+                    const member = users.find(u => u.id === journal.userId) || { name: 'Unknown', avatar: '👤' };
+                    return (
+                      <div key={journal.id} className="glass-card-static" style={{ padding: '20px' }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
+                          <div style={{
+                            width: '40px', height: '40px', borderRadius: '50%',
+                            background: 'var(--bg-elevated)', border: '1px solid var(--glass-border)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: '1.2rem',
+                          }}>
+                            {member.avatar}
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                              <div style={{ fontWeight: '700', fontSize: '0.9rem' }}>{member.name}</div>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                {new Date(journal.createdAt).toLocaleDateString()} at {new Date(journal.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </div>
+                            </div>
+                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+                              {journal.text}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
           </div>
         </div>
       </main>
